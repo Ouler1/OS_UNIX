@@ -1,7 +1,8 @@
 #!/bin/bash
 
-# Выполняем, если произошел выход по исключению (Ctrl-c)
-trap "rm ./fifo1t; clear && echo -en '\e[3J'; exit 1" 1 2 3 15
+# Выполняем, если произошел выход по исключению (CTRL-C, CTRL-Z, закрытие терминала и др.)
+trap "" 20
+trap "rm ./fifo1t; clear && echo -en '\e[3J'; exit 1" 1 2 3 8 9 14 15 23
 
 # Команда очистки экрана
 clear && echo -en "\e[3J"
@@ -34,9 +35,7 @@ do
 	if [[ $user = 1 ]]
 	then
 		echo "Игрок 1. Символ X."
-	fi
-	if [[ $user = 2 ]]
-	then
+	else
 		echo "Игрок 2. Символ O."
 	fi
 	
@@ -106,21 +105,16 @@ do
 		# Сообщение о пользовательской ошибке
 		if [[ $errorgame = 1 ]] ; then echo "Ошибка. Клетка уже заполнена." ; errorgame=0 ; fi
 		if [[ $errorgame = 2 ]] ; then echo "Ошибка. Некорректный выбор." ; errorgame=0 ; fi
-		echo "Ваш ход: (Формат: СтолбецСтрока, Выход: exit)"
+		echo "Ваш ход: (Формат: СтолбецСтрока, Выход: CTRL+C)"
+		# Ожидание ввода
+		trap "echo 'exit' > ./fifo1t ; rm ./fifo1t; clear && echo -en '\e[3J'; exit 1" 1 2 3 8 9 14 15 23
 		read step
+		trap "rm ./fifo1t; clear && echo -en '\e[3J'; exit 1" 1 2 3 8 9 14 15 23
 		# Если другой игрок вышел.
 		if ! [[ -e "$file" ]]
 		then
 			echo "Оппонент вышел. Нажмите Enter."
 			read a
-			clear && echo -en "\e[3J"
-			exit 0
-		fi
-		# Выход.
-		if [[ $step = "exit" ]]
-		then
-			echo $step > ./fifo1t
-			rm ./fifo1t
 			clear && echo -en "\e[3J"
 			exit 0
 		fi
@@ -153,7 +147,7 @@ do
 	else
 		# Второй игрок ждет окончания хода первого игрока.
 		echo ""
-		echo "Ход оппонента..."
+		echo "Ход оппонента... (Выход: CTRL+C)"
 		step=$(cat ./fifo1t)
 		
 		# Если другой игрок вышел.

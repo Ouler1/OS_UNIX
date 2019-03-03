@@ -13,15 +13,38 @@ int main(int argc, char *argv[]) {
 		printf("%s", msg);
 		return 0;
 	}
+	int sum = 0;
 	while (1) {
-		char buf;
-		//Считываем следующий символ из входного потока
-		int cod = scanf("%c", &buf);
+		char* buf = malloc(1024*4);
+		int len;
+		//Считываем следующий блок символов из входного потока
+		int cod = scanf("%1024s%n", buf, &len);
 		//Если считывать нечего, выходим
 		if (cod == -1) break;
-		//Если не нулевой байт, пишем на диск, иначе пропускаем операйией lseek.
-		if (buf != 0) write(fd, &buf, 1);
-		else lseek(fd, 1, SEEK_CUR);
+		int nullsearch = 1;
+		int i = 0;
+		int c = 0;
+		while(i < len) {
+			//Если отслеживаем ненулевые байты и встретили нулевой, то записываем на диск прочитанную часть и начинаем отслеживать нулевую последовательность
+			//Если отслеживали нулевую последовательность и встретили ненулевой байт, сдвигаемся оперцией lseek
+			if(nullsearch == 1 && buf[c] == 0) {
+				write(fd, buf, c);
+				buf = &buf[c];
+				nullsearch = 0;
+				c = 0;
+			}
+			else if (nullsearch == 0 && buf[c] != 0) {
+				lseek(fd, c, SEEK_CUR);
+				buf = &buf[c];
+				nullsearch = 1;
+				c = 0;
+			}
+			i = i + 1;
+			c = c + 1;
+		}
+		//Если вышли за предел блока, выталкиваем в диск прочитанную часть.
+		if(nullsearch == 1) write(fd, buf, c);
+		else lseek(fd, c, SEEK_CUR);
 	}
 	close(fd);
 }
