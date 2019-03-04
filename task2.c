@@ -13,9 +13,8 @@ int main(int argc, char *argv[]) {
 		printf("%s", msg);
 		return 0;
 	}
-	int sum = 0;
+	char* buf = malloc(1024*4);
 	while (1) {
-		char* buf = malloc(1024*4);
 		int len;
 		//Считываем следующий блок символов из входного потока
 		int cod = scanf("%1024s%n", buf, &len);
@@ -46,5 +45,6 @@ int main(int argc, char *argv[]) {
 		if(nullsearch == 1) write(fd, buf, c);
 		else lseek(fd, c, SEEK_CUR);
 	}
+	free(buf);
 	close(fd);
 }
