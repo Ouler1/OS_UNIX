@@ -79,6 +79,14 @@ do
 	if [[ ${arraysym[0]} = 2 ]] && [[ ${arraysym[4]} = 2 ]] && [[ ${arraysym[8]} = 2 ]] ; then win=2 ; fi
 	if [[ ${arraysym[2]} = 2 ]] && [[ ${arraysym[4]} = 2 ]] && [[ ${arraysym[6]} = 2 ]] ; then win=2 ; fi
 	
+	# Проверка ничьей
+	sum_k=0
+	for (( k=0; k < 10; k++ ))
+	do
+		if [[ ${arraysym[$k]} != 0 ]] ; then let "sum_k = sum_k + 1" ; fi 
+	done
+	if [[ $sum_k = 10 ]] && [[ $win = 0 ]] ; then win=3 ; fi
+	
 	# Если победитель есть, то выводим информацию об этом и выходим
 	if [[ $win = 1 ]]
 	then
@@ -98,7 +106,15 @@ do
 		clear && echo -en "\e[3J"
 		exit 0
 	fi
-
+	if [[ $win = 3 ]]
+	then
+		echo "Ничья!!!"
+		echo "Нажмите Enter, чтобы выйти."
+		read a
+		rm ./fifo1t
+		clear && echo -en "\e[3J"
+		exit 0
+	fi
 	# Ход игрока
 	if [[ $active = "1" ]]
 	then
