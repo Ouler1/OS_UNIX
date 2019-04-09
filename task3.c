@@ -8,57 +8,125 @@
 #include <ctype.h>
 #include <math.h>
 
-//Функция для добавления нового значения в массив
-long double * add(long double * ldm, int size, char * num) {
-	//Конвертирование строки в число
-	long double ld = strtold(num, 0);
-	//Проверка результата конвертирования, если переполнение или ошибка конвертирования,
-	//то выходим и продолжаем поиск чисел
-	if (ld == HUGE_VAL || ld == HUGE_VALL || ld == HUGE_VALF || ld == 0) {
-		printf("Error number");
-		errno = 100001;
-		return ldm;
-	}
-	//Выделение памяти
-	ldm = (long double*)realloc(ldm, (size + 1) * sizeof(long double));
-	//Если выделить не получилось, то завершаем работу
-	if(ldm == NULL) {
-		printf("Reallocate error\n");
-		errno = 100002;
-		return ldm;
-	}
-	//Присвоение значения
-	ldm[size] = ld;
-	errno = 0;
-	return ldm;
-}
+//Структура для массива ссылок на строки
+struct array_links {
+	char** links;
+	long int size;
+};
 
 //Выводим числа в файл
-int print_arr(char* name, long double A[], long long int n)
+int print_arr(FILE* file, char** ls, long int size)
 {
-	long long int i;
-	FILE *fpw;
-	fpw = fopen(name, "wt");
-	//Проверка на возможность открытия файла
-	if (fpw == NULL) {
-		printf("Cannot open %s for write\n", name);
-		return -1;
-	}
+	long int i;
 	//Печать в файл
-	for (i = 0; i < n; i++)
-		fprintf(fpw, "%Lf\n", A[i]);
-	fclose(fpw);
+	for (i = 0; i < size; i++)
+		fprintf(file, "%s\n", ls[i]);
 	return 0;
 }
 
-//Функция сравнения
-int compare(const void *a, const void *b)
-{
-    const long double fa = *(const long double *) a;
-    const long double fb = *(const long double *) b;
-    if (fa > fb) return 1;
-    if (fa < fb) return -1;
-    return 0;
+//Сравнение строк как чисел(собственно сравнение)
+int compare_len_str(char* a, char* b) {
+    if (strlen(a) < strlen(b))
+        return -1;
+    if (strlen(a) > strlen(b))
+        return 1;
+    return strcmp(a, b);
+}
+
+//Функция сравнения чисел как строк(получение строк по ссылкам,
+//Разрешение сравнения между числами разных знаков)
+int compare(const void* a, const void* b) {
+    char* aec = *(char**)a;
+    char* bec = *(char**)b;
+    if (aec[0] == bec[0] && aec[0] == '-')
+        return -compare_len_str(aec, bec);
+    else if (aec[0] == '-') return -1;
+    else if (bec[0] == '-') return 1;
+    return compare_len_str(aec, bec);
+}
+
+//Создание автомата
+int* create_KA() {
+	int* a = (int *)malloc(sizeof(int) * 16);
+	a[0] = 1;
+	a[1] = 2;
+	a[2] = 3;
+	a[3] = 0;
+	a[4] = 1;
+	a[5] = 1;
+	a[6] = 4;
+	a[7] = 4;
+	a[8] = 4;
+	a[9] = 4;
+	a[10] = 4;
+	a[11] = 4;
+	a[12] = 1;
+	a[13] = 0;
+	a[14] = 0;
+	a[15] = 0;
+	return a;
+}
+
+//Чтение файла в память
+char * read_file(FILE* file) {
+	size_t len;
+	long int file_size;
+	char* buf = NULL;
+	//Определяем размер файла
+	fseek(file, 0, SEEK_END);
+	file_size = ftell(file);
+	rewind(file);
+	//Выделяем память под прочтение файла
+	buf = (char *)malloc(sizeof(char) * (file_size + 1));
+	if(buf == NULL) {
+		return buf;
+	}
+	len = fread(buf, sizeof(char), (size_t)file_size, file);
+	buf[file_size] = '\0';
+	//Если файл был прочитан не весь, то произошла ошибка
+	if(len != file_size) {
+		free(buf);
+		buf = NULL;
+	}
+	return buf;
+}
+
+//Добывление строки в массив
+char** add(char** ls, long int size, char* content, long int pos_con, long int len_num) {
+	//Выделяем память для массива
+	if(size == 0) {
+		ls = (char**)malloc(1 * sizeof(char*));
+	}
+	else {
+		ls = (char**)realloc(ls, (size + 1) * sizeof(char*));
+	}
+	//Если выделить не получилось, выдаем ошибку
+	if(ls == NULL) {
+		printf("Reallocate error\n");
+		return NULL;
+	}
+	//Выделяем память для цифры
+	char* substring = (char*)malloc(sizeof(char) * (len_num + 1));
+	//Если выделить не получилось
+	if(substring == NULL) {
+		printf("Allocate error\n");
+		return NULL;
+	}
+	//Кладем ссылку на строку в массив
+	strncpy(substring, content + pos_con - len_num, len_num);
+	substring[len_num] = '\0';
+	ls[size] = substring;
+	return ls;
+}
+
+//Вычисление нового состояния автомата
+int shift_KA(int* ka, int c_st, char sym) {
+	int c_sh;
+	if('1' <= sym && sym <= '9') c_sh = 0;
+	else if(sym == '0') c_sh = 1;
+	else if(sym == '-') c_sh = 2;
+	else c_sh = 3;
+	return ka[c_st * 4 + c_sh];
 }
 
 int main (int argc, char * argv[]) {
@@ -67,213 +135,71 @@ int main (int argc, char * argv[]) {
 		printf("Argument error\n");
 		exit(-1);
 	}
-	//Динамический массив
-	long double * ldm = NULL;
-	int size = 0;
-	
-	int i;
+	FILE *fpw;
+	fpw = fopen(argv[argc - 1], "wt");
+	//Проверка на возможность открытия файла
+	if (fpw == NULL) {
+		printf("Cannot open %s for write\n", argv[argc - 1]);
+		return -1;
+	}
 	int k;
 	FILE *fp;
-	int cod;
+	char* buf;
+	
+	char** ls;
+	long int size = 0;
+	
+	//Автомат для поиска чисел в файле
+	int* a = create_KA();
 	for(k = 1; k < argc - 1; k++) {
 		//Открываем на чтение
 		fp = fopen(argv[k], "rt");
 		//Проверка на возможность открытия на чтение, если
-		//не открывается, от читаем следующий
+		//не открывается, то читаем следующий
 		if (fp == NULL) {
 			printf("Cannot open %s\n", argv[k]);
 			continue;
 		}
-
-		//Автомат для поиска чисел в файле
-		int a[7][5];
-		a[0][0] = 1;
-		a[0][1] = 2;
-		a[0][2] = 3;
-		a[0][3] = 0;
-		a[0][4] = 0;
-		a[1][0] = 1;
-		a[1][1] = 1;
-		a[1][2] = 5;
-		a[1][3] = 4;
-		a[1][4] = 5;
-		a[2][0] = 5;
-		a[2][1] = 5;
-		a[2][2] = 5;
-		a[2][3] = 4;
-		a[2][4] = 0;
-		a[3][0] = 1;
-		a[3][1] = 2;
-		a[3][2] = 0;
-		a[3][3] = 0;
-		a[3][4] = 0;
-		a[4][0] = 6;
-		a[4][1] = 6;
-		a[4][2] = 0;
-		a[4][3] = 0;
-		a[4][4] = 7;
-		a[6][0] = 6;
-		a[6][1] = 6;
-		a[6][2] = 5;
-		a[6][3] = 5;
-		a[6][4] = 5;
-		int c_sh;
-		int c_st = 0;
-		int max = 257;
-		int c = 0;
-		long double ld;
-		
-		//Выделение памяти для буферов
-		char* num = malloc(257);
-		char* buf = malloc(1024);
-		//Если выделить не получилось, выходим
-		if (buf == NULL || num == NULL) {
-			printf("Allocate error\n");
+		buf = read_file(fp);
+		//Если при прочтении произошла ошибка, то закрываем файл и
+		//читаем следующий
+		if(buf == NULL) {
+			printf("Cannot read %s\n", argv[k]);
 			fclose(fp);
-			exit(-1);
+			continue;
 		}
-		
-		
-		int is_conculate = 1;
-		while (1) {
-			i = 0;
-			int len;
-			int fs = fscanf(fp, "%1024s%n", buf, &len);
-			if(fs == EOF) break;
-			while(i < len){
-				//Если число слишком большое, то читаем файл до тех пор, пока
-				//не встретим новое
-				if(c == max - 1) {
-					is_conculate = 0;
-					c = 0;
-					continue;
-				}
-				//Переходы между состояниями автомата
-				if('1' <= buf[i] && buf[i] <= '9') c_sh = 0;
-				else if(buf[i] == '0') c_sh = 1;
-				else if(buf[i] == '-') c_sh = 2;
-				else if(buf[i] == '.') c_sh = 3;
-				else c_sh = 4;
-				c_st = a[c_st][c_sh];
-				if(c_st == 0) {
-					c = 0;
-					is_conculate = 1;
-				}
-				//Если число найдено и оно не большое, пишем в массив
-				if(is_conculate == 1) {
-					if(c_st == 7) {
-						num[c - 1] = 0;
-						ldm = add(ldm, size, num);
-						//Если возникла ошибка при выделений памяти, выходим
-						if(errno == 100002) {
-							fclose(fp);
-							exit(-1);
-						}
-						else if (errno == 0) {
-							size = size + 1;
-						}
-						i = i - 1;
-						c_st = 0;
-						c = 0;
-					}
-					else if(c_st == 5) {
-						num[c] = 0;
-						ldm = add(ldm, size, num);
-						if(errno == 100002) {
-							fclose(fp);
-							exit(-1);
-						}
-						else if (errno == 0) {
-							size = size + 1;
-						}
-						i = i - 1;
-						c_st = 0;
-						c = 0;
-					}
-					else if(c_st != 0) {
-						//Пишем цифры, минус, точку в буффер
-						num[c] = buf[i];
-						c = c + 1;
-					}
-				}
-				i = i + 1;
+		int c_st = 0;
+		long int i = 0;
+		long int c = 0;
+		int cod;
+		char* num;
+		int while_end = 0;
+		while(!while_end) {
+			if(buf[i] == '\0') {
+				while_end = 1;
 			}
-			if(len != 1024) {
-				c_st = a[c_st][4];
-				if(is_conculate == 1) {
-					if(c_st == 0) {
-						c = 0;
-						is_conculate = 1;
-					}	
-					if(c_st == 7) {
-						num[c - 1] = 0;
-						ldm = add(ldm, size, num);
-						//Если возникла ошибка при выделений памяти, выходим
-						if(errno == 100002) {
-							fclose(fp);
-							exit(-1);
-						}
-						else if (errno == 0) {
-							size = size + 1;
-						}
-						i = i - 1;
-						c_st = 0;
-						c = 0;
-					}
-					else if(c_st == 5) {
-						num[c] = 0;
-						ldm = add(ldm, size, num);
-						if(errno == 100002) {
-							fclose(fp);
-							exit(-1);
-						}
-						else if (errno == 0) {
-							size = size + 1;
-						}
-						i = i - 1;
-						c_st = 0;
-						c = 0;
-					}
-					else if(c_st != 0) {
-						//Пишем цифры, минус, точку в буффер
-						num[c] = buf[i];
-						c = c + 1;
-					}
-				}
-			}
-		}
-		//Проверка числа в конце файла
-		c_st = a[c_st][4];
-		if(is_conculate == 1) {
-			if(c_st == 7) {
-				num[c - 1] = 0;
-				ldm = add(ldm, size, num);
-				if(errno == 100002) {
-					fclose(fp);
+			//Переходы между состояниями автомата
+			c_st = shift_KA(a, c_st, buf[i]);
+			if(c_st == 4) {
+				ls = add(ls, size, buf, i, c);
+				//Если произошла ошибка при выделении памяти, то выходим
+				if(ls == NULL) {
 					exit(-1);
 				}
-				else if (errno == 0) {
-					size = size + 1;
-				}
+				size = size + 1;
+				c = 0;
+				i = i - 1;
 			}
-			else if(c_st == 5) {
-				num[c] = 0;
-				ldm = add(ldm, size, num);
-				if(errno == 100002) {
-					fclose(fp);
-					exit(-1);
-				}
-				else if (errno == 0) {
-					size = size + 1;
-				}
+			else if(c_st == 0) {
+				c = 0;
 			}
-		}
-		free(buf);
-		free(num);
-		fclose(fp);
+			else {
+				c = c + 1;
+			}
+			i = i + 1;
+		}	
 	}
-	//Сортировка
-	qsort(ldm, size, sizeof(long double), compare);
-	//Печать в файл
-	print_arr(argv[argc - 1], ldm, size);
+	qsort(ls, size, sizeof(char *), compare);
+	print_arr(fpw, ls, size);
+	fclose(fpw);
 }
