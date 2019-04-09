@@ -184,6 +184,8 @@ int main (int argc, char * argv[]) {
 				ls = add(ls, size, buf, i, c);
 				//Если произошла ошибка при выделении памяти, то выходим
 				if(ls == NULL) {
+					fclose(fp);
+					fclose(fpw);
 					exit(-1);
 				}
 				size = size + 1;
