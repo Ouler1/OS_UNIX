@@ -199,7 +199,8 @@ int main (int argc, char * argv[]) {
 				c = c + 1;
 			}
 			i = i + 1;
-		}	
+		}
+		fclose(fp);
 	}
 	qsort(ls, size, sizeof(char *), compare);
 	print_arr(fpw, ls, size);
