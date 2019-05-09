@@ -77,10 +77,10 @@ int create_socket(struct Map* m)
 void sleep_t() {
 	int msec = 0;
 	clock_t before = clock();
-do {
-	clock_t difference = clock() - before;
-	msec = difference * 1000 / CLOCKS_PER_SEC;
-} while ( msec < 1000 );
+	do {
+		clock_t difference = clock() - before;
+		msec = difference * 1000 / CLOCKS_PER_SEC;
+	} while ( msec < 1000 );
 }
 
 //Поток для отслеживания ошибок
