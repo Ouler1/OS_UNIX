@@ -163,8 +163,8 @@ void init_command(int index) {
 	if(pid == -1) {
 		syslog(LOG_ERR, "Error creating subprocess");
 		exit(-1);
-    }
-    if(pid == 0) {
+	}
+	if(pid == 0) {
 		//Потомок выполняет команду
 		exit(start(command));
 	}
@@ -204,7 +204,7 @@ void kill_all() {
 //Обработчик сигнала HUP
 void handler_hup(int sig_n) {
 	signal(SIGHUP, handler_hup);
-    syslog(LOG_INFO, "Received HUP. Reinitialization");
+	syslog(LOG_INFO, "Received HUP. Reinitialization");
 	kill_all();
 	//Освобождение ресурсов и чтение конфигурационного файла заново.
 	for(int i = 0; i < size; i++) {
