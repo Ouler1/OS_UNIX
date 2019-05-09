@@ -168,11 +168,11 @@ void init_command(int index) {
 		//Потомок выполняет команду
 		exit(start(command));
 	}
-    else {
-        //Отец запоминает PID
+	else {
+		//Отец запоминает PID
 		add_pid(index, pid);
 		syslog(LOG_INFO, "Start command: '%s'; pid = %d", command, pid);
-    }
+	}
 }
 
 //Запуск команд
@@ -184,7 +184,7 @@ void init_commands() {
 
 //Удаление файла дочернего процесса
 void delete_pid(int index) {
-    char* filename_pid = (char*)malloc(sizeof(char) * 50);
+	char* filename_pid = (char*)malloc(sizeof(char) * 50);
 	if(filename_pid == NULL) {
 		printf("Allocate error\n");
 		exit(-1);
@@ -195,10 +195,10 @@ void delete_pid(int index) {
 
 //Принудительное завершение процессов при получений сигнала HUP 
 void kill_all() {
-    for (int i = 0; i < size; i++) {
-        kill(list_pid[i], SIGKILL);
-        delete_pid(i);
-    }
+	for (int i = 0; i < size; i++) {
+		kill(list_pid[i], SIGKILL);
+		delete_pid(i);
+	}
 }
 
 //Обработчик сигнала HUP

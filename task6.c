@@ -18,19 +18,19 @@ char* get_lck (char* filename) {
 //Запись в файл .lck информации о блокировке
 void write_perm(char* lock_file) {
 	FILE* lock = fopen(lock_file, "w");
-    fprintf(lock, "%d\n", getpid());
-    fprintf(lock, "%s\n", "w");
-    fclose(lock);
+	fprintf(lock, "%d\n", getpid());
+	fprintf(lock, "%s\n", "w");
+	fclose(lock);
 }
 
 //Получение права записи
 void acquire(char* lck) {
 	FILE* lock = fopen(lck, "r");
-    while (lock != NULL) {
-        fclose(lock);
-        sleep(1);
+	while (lock != NULL) {
+		fclose(lock);
+		sleep(1);
 		lock = fopen(lck, "r");
-    }
+	}
 	write_perm(lck);
 }
 
