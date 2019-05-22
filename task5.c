@@ -91,12 +91,12 @@ void add_com_and_opt(char* str_com) {
 	int opt;
 	int len_str;
 	//Проверка на ошибку с опцией ожидания
-	if(strcmp(str_com + pos_space + 1, "wait\n") != 0 && strcmp(str_com + pos_space + 1, "respawn\n") != 0) {
+	if(strcmp(str_com + pos_space + 1, "wait") != 0 && strcmp(str_com + pos_space + 1, "respawn") != 0) {
 		syslog(LOG_ERR, "Invalid option");
 		return;
 	}
 	
-	if(strcmp(str_com + pos_space + 1, "wait\n") == 0) opt = 0;
+	if(strcmp(str_com + pos_space + 1, "wait") == 0) opt = 0;
 	else opt = 1;
 	
 	//Выделяем память в массивах под новую команду
@@ -132,27 +132,26 @@ void add_com_and_opt(char* str_com) {
 
 //Чтение файла конфигурации
 void read_config() {
-	char* buf = malloc(4096);
+	char * line = NULL;
+    size_t len = 0;
+	ssize_t readsize;
 	if(config_fd == NULL) {
 		syslog(LOG_ERR, "Can't read config file");
 		exit(-1);
 	}
 	rewind(config_fd);
-	while(1) {
-		int state = fgets(buf, 4096, config_fd);
-		if(state == NULL) {
-			if(feof(config_fd) != 0) {
-				syslog(LOG_INFO, "End reading config file");
-				break;
-			}
-			else {
-				syslog(LOG_ERR, "Error reading config file");
-				exit(-1);
-			}
+	while ((readsize = getline(&line, &len, config_fd)) != -1) {
+		char* linetemp = (char*)malloc(readsize * sizeof(char));
+		if (linetemp == NULL) {
+			syslog(LOG_ERR, "Error reading config file");
+			exit(-1);
 		}
-		add_com_and_opt(buf);
+		strcpy(linetemp, line);
+		linetemp[readsize - 1] = '\0';
+		add_com_and_opt(linetemp);
+		free(linetemp);
 	}
-	free(buf);
+	syslog(LOG_INFO, "End reading config file");
 }
 
 //Создание дочернего процесса, который будет выполнять команду
@@ -255,26 +254,27 @@ void custom_wait() {
 	}
 }
 
+bool daemon_start() {
+    pid_t pid = fork();
+    if (pid > 0) {
+		printf("%d\n", pid);
+        exit(-1);
+    }
+    if (setsid() < 0) {
+        return false;
+    }
+    umask(0);
+    chdir("/");
+    close(STDIN_FILENO);
+    close(STDOUT_FILENO);
+    close(STDERR_FILENO);
+    return true;
+}
+
 int main (int argc, char* argv[]) {
 	config_fd = fopen(CONFIG_FILE, "r");
 	//"Скелет" демона
-	int fd;
-	struct rlimit flim;
-	if(getppid() != 1) {
-		signal(SIGTTOU, SIG_IGN);
-		signal(SIGTTIN, SIG_IGN);
-		signal(SIGTSTP, SIG_IGN);
-		if(fork() != 0) exit(0);
-		setsid();
-	}
-	getrlimit(RLIMIT_NOFILE, &flim);
-	for(fd = 0; fd < flim.rlim_max; fd++) {
-		close(fd);
-	}
-	chdir("/");
-	openlog("T5", LOG_PID | LOG_CONS, LOG_DAEMON);
-	syslog(LOG_INFO, "START DAEMON");
-	openlog("t5daemon", LOG_CONS | LOG_NDELAY, LOG_LOCAL1);
+	daemon_start();
 	//Основные шаги: чтение конфига, запуск команд, ожидание завершения команд
 	read_config();
 	init_commands();
