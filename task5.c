@@ -257,7 +257,7 @@ void custom_wait() {
 bool daemon_start() {
     pid_t pid = fork();
     if (pid > 0) {
-		printf("%d\n", pid);
+        printf("%d\n", pid);
         exit(-1);
     }
     if (setsid() < 0) {
@@ -268,6 +268,8 @@ bool daemon_start() {
     close(STDIN_FILENO);
     close(STDOUT_FILENO);
     close(STDERR_FILENO);
+    openlog("T5", LOG_PID | LOG_CONS, LOG_DAEMON);
+    syslog(LOG_INFO, "START DAEMON");
     return true;
 }
 
